@@ -353,7 +353,7 @@ class DisFinalBlock(th.nn.Module):
         self.batch_discriminator = MinibatchStdDev()
         if use_eql:
             self.conv_1 = _equalized_conv1d(in_channels + 1, in_channels, 3, pad=1, bias=True)
-            self.conv_2 = _equalized_conv1d(in_channels, in_channels, 3, bias=True)
+            self.conv_2 = _equalized_conv1d(in_channels, in_channels, 4, bias=True)
             # final conv layer emulates a fully connected layer
             self.conv_3 = _equalized_conv1d(in_channels, 1, 1, bias=True)
         else:

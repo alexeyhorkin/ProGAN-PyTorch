@@ -108,3 +108,12 @@ venv.bak/
 
 # ignore vscode data
 .vscode/
+
+# ignore samples
+samples/*
+
+# ignore models
+models/*
+
+#ignore datasets
+cifar-10/*
