@@ -182,7 +182,6 @@ class Discriminator(th.nn.Module):
         :return: out => raw prediction values (WGAN-GP)
         """
 
-        print(x.shape)
         assert height < self.height, "Requested output depth cannot be produced"
 
         if height > 0:
@@ -198,7 +197,6 @@ class Discriminator(th.nn.Module):
                 y = block(y)
         else:
             y = self.rgb_to_features[0](x)
-            print('lol',y.shape)
             
 
         out = self.final_block(y)
@@ -466,7 +464,6 @@ class ProGAN:
         :param alpha: current alpha for fade-in
         :return: current loss (Wasserstein loss)
         """
-        # print('rb is ', real_batch.shape)
         real_samples = self.__progressive_downsampling(real_batch, depth, alpha)
 
         loss_val = 0
@@ -611,8 +608,7 @@ class ProGAN:
 
                     gan_input = th.randn(images.shape[0], self.latent_size).to(self.device)
 
-                    # print(gan_input.shape)
-                    # print(images.shape)
+
 
                     # optimize the discriminator:
                     dis_loss = self.optimize_discriminator(gan_input, images,

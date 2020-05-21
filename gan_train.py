@@ -22,12 +22,12 @@ class Sin_dataset(Dataset):
         self.size = size
 
     def __len__(self):
-            return 100
+            return 1000
     
     def __getitem__(self, index):
-        t = np.linspace(0,1.5,self.size)
+        t = np.linspace(0,1,self.size)
         # print(t)
-        c = rd.random()*10
+        c = rd.random()
         sample = np.sin(c*t)
         # print(sample)
         sample = np.expand_dims(sample, axis=0)
@@ -42,13 +42,14 @@ class Sin_dataset(Dataset):
 if __name__ == '__main__':
 
     # some parameters:
-    size_of_data = 64
-    depth = 5
+    size_of_data = 32
+    depth = 4
     # hyper-parameters per depth (resolution)
-    num_epochs = [4]*depth
+    num_epochs = [15]*depth
     fade_ins = [50]*depth
-    batch_sizes = [20]*depth
-    latent_size = 16
+    batch_sizes = [100]*depth
+    latent_size = 2
+    lr = 0.0002
 
     # select the device to be used for training
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -60,7 +61,7 @@ if __name__ == '__main__':
     # This line creates the PRO-GAN
     # ======================================================================
     pro_gan = ProGAN(depth=depth, 
-                    latent_size=latent_size, device=device)
+                    latent_size=latent_size, loss='standard-gan', learning_rate=lr, device=device)
     # ======================================================================
 
     # ======================================================================

@@ -94,7 +94,7 @@ class StandardGAN(GANLoss):
         return (real_loss + fake_loss) / 2
 
     def gen_loss(self, _, fake_samps, height, alpha):
-        preds, _, _ = self.dis(fake_samps, height, alpha)
+        preds = self.dis(fake_samps, height, alpha)
         return self.criterion(th.squeeze(preds),
                               th.ones(fake_samps.shape[0]).to(fake_samps.device))
 
@@ -123,8 +123,6 @@ class WGAN_GP(GANLoss):
         epsilon = th.rand((batch_size, 1, 1)).to(fake_samps.device)
 
         # create the merge of both real and fake samples
-        # print(real_samps.shape)
-        # print(fake_samps.shape)
         merged = epsilon * real_samps + ((1 - epsilon) * fake_samps)
         merged.requires_grad_(True)
 
@@ -146,6 +144,7 @@ class WGAN_GP(GANLoss):
     def dis_loss(self, real_samps, fake_samps, height, alpha):
         # define the (Wasserstein) loss
         fake_out = self.dis(fake_samps, height, alpha)
+        # print(fake_out.shape)
         real_out = self.dis(real_samps, height, alpha)
 
         loss = (th.mean(fake_out) - th.mean(real_out)
