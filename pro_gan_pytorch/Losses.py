@@ -120,9 +120,11 @@ class WGAN_GP(GANLoss):
         batch_size = real_samps.shape[0]
 
         # generate random epsilon
-        epsilon = th.rand((batch_size, 1, 1, 1)).to(fake_samps.device)
+        epsilon = th.rand((batch_size, 1, 1)).to(fake_samps.device)
 
         # create the merge of both real and fake samples
+        # print(real_samps.shape)
+        # print(fake_samps.shape)
         merged = epsilon * real_samps + ((1 - epsilon) * fake_samps)
         merged.requires_grad_(True)
 

@@ -4,7 +4,7 @@ import torch as th
 
 
 # extending Conv2D and Deconv2D layers for equalized learning rate logic
-class _equalized_conv2d(th.nn.Module):
+class _equalized_conv1d(th.nn.Module):
     """ conv2d with the concept of equalized learning rate
         Args:
             :param c_in: input channels
@@ -17,14 +17,14 @@ class _equalized_conv2d(th.nn.Module):
 
     def __init__(self, c_in, c_out, k_size, stride=1, pad=0, bias=True):
         """ constructor for the class """
-        from torch.nn.modules.utils import _pair
+        from torch.nn.modules.utils import _single
         from numpy import sqrt, prod
 
-        super(_equalized_conv2d, self).__init__()
+        super(_equalized_conv1d, self).__init__()
 
         # define the weight and bias if to be used
         self.weight = th.nn.Parameter(th.nn.init.normal_(
-            th.empty(c_out, c_in, *_pair(k_size))
+            th.empty(c_out, c_in, *_single(k_size))
         ))
 
         self.use_bias = bias
@@ -34,7 +34,7 @@ class _equalized_conv2d(th.nn.Module):
         if self.use_bias:
             self.bias = th.nn.Parameter(th.FloatTensor(c_out).fill_(0))
 
-        fan_in = prod(_pair(k_size)) * c_in  # value of fan_in
+        fan_in = prod(_single(k_size)) * c_in  # value of fan_in
         self.scale = sqrt(2) / sqrt(fan_in)
 
     def forward(self, x):
@@ -43,9 +43,9 @@ class _equalized_conv2d(th.nn.Module):
         :param x: input
         :return: y => output
         """
-        from torch.nn.functional import conv2d
+        from torch.nn.functional import conv1d
 
-        return conv2d(input=x,
+        return conv1d(input=x,
                       weight=self.weight * self.scale,  # scale the weight on runtime
                       bias=self.bias if self.use_bias else None,
                       stride=self.stride,
@@ -55,7 +55,7 @@ class _equalized_conv2d(th.nn.Module):
         return ", ".join(map(str, self.weight.shape))
 
 
-class _equalized_deconv2d(th.nn.Module):
+class _equalized_deconv1d(th.nn.Module):
     """ Transpose convolution using the equalized learning rate
         Args:
             :param c_in: input channels
@@ -68,14 +68,14 @@ class _equalized_deconv2d(th.nn.Module):
 
     def __init__(self, c_in, c_out, k_size, stride=1, pad=0, bias=True):
         """ constructor for the class """
-        from torch.nn.modules.utils import _pair
+        from torch.nn.modules.utils import _single
         from numpy import sqrt
 
-        super(_equalized_deconv2d, self).__init__()
+        super(_equalized_deconv1d, self).__init__()
 
         # define the weight and bias if to be used
         self.weight = th.nn.Parameter(th.nn.init.normal_(
-            th.empty(c_in, c_out, *_pair(k_size))
+            th.empty(c_in, c_out, *_single(k_size))
         ))
 
         self.use_bias = bias
@@ -94,9 +94,9 @@ class _equalized_deconv2d(th.nn.Module):
         :param x: input
         :return: y => output
         """
-        from torch.nn.functional import conv_transpose2d
+        from torch.nn.functional import conv_transpose1d
 
-        return conv_transpose2d(input=x,
+        return conv_transpose1d(input=x,
                                 weight=self.weight * self.scale,  # scale the weight on runtime
                                 bias=self.bias if self.use_bias else None,
                                 stride=self.stride,
@@ -183,14 +183,14 @@ class GenInitialBlock(th.nn.Module):
         super(GenInitialBlock, self).__init__()
 
         if use_eql:
-            self.conv_1 = _equalized_deconv2d(in_channels, in_channels, (4, 4), bias=True)
-            self.conv_2 = _equalized_conv2d(in_channels, in_channels, (3, 3),
+            self.conv_1 = _equalized_deconv1d(in_channels, in_channels, 4, bias=True)
+            self.conv_2 = _equalized_conv1d(in_channels, in_channels, 3,
                                             pad=1, bias=True)
 
         else:
-            from torch.nn import Conv2d, ConvTranspose2d
-            self.conv_1 = ConvTranspose2d(in_channels, in_channels, (4, 4), bias=True)
-            self.conv_2 = Conv2d(in_channels, in_channels, (3, 3), padding=1, bias=True)
+            from torch.nn import Conv1d, ConvTranspose1d
+            self.conv_1 = ConvTranspose1d(in_channels, in_channels, 4, bias=True)
+            self.conv_2 = Conv1d(in_channels, in_channels, 3, padding=1, bias=True)
 
         # Pixelwise feature vector normalization operation
         self.pixNorm = PixelwiseNorm()
@@ -205,7 +205,7 @@ class GenInitialBlock(th.nn.Module):
         :return: y => output
         """
         # convert the tensor shape:
-        y = th.unsqueeze(th.unsqueeze(x, -1), -1)
+        y = th.unsqueeze(x, -1)
 
         # perform the forward computations:
         y = self.lrelu(self.conv_1(y))
@@ -235,15 +235,15 @@ class GenGeneralConvBlock(th.nn.Module):
         self.upsample = lambda x: interpolate(x, scale_factor=2)
 
         if use_eql:
-            self.conv_1 = _equalized_conv2d(in_channels, out_channels, (3, 3),
+            self.conv_1 = _equalized_conv1d(in_channels, out_channels, 3,
                                             pad=1, bias=True)
-            self.conv_2 = _equalized_conv2d(out_channels, out_channels, (3, 3),
+            self.conv_2 = _equalized_conv1d(out_channels, out_channels, 3,
                                             pad=1, bias=True)
         else:
-            from torch.nn import Conv2d
-            self.conv_1 = Conv2d(in_channels, out_channels, (3, 3),
+            from torch.nn import Conv1d
+            self.conv_1 = Conv1d(in_channels, out_channels, 3,
                                  padding=1, bias=True)
-            self.conv_2 = Conv2d(out_channels, out_channels, (3, 3),
+            self.conv_2 = Conv1d(out_channels, out_channels, 3,
                                  padding=1, bias=True)
 
         # Pixelwise feature vector normalization operation
@@ -315,19 +315,19 @@ class MinibatchStdDev(th.nn.Module):
         :param alpha: small number for numerical stability
         :return: y => x appended with standard deviation constant map
         """
-        batch_size, _, height, width = x.shape
+        batch_size, _, height = x.shape
 
-        # [B x C x H x W] Subtract mean over batch.
+        # [B x C x H] Subtract mean over batch.
         y = x - x.mean(dim=0, keepdim=True)
 
-        # [1 x C x H x W]  Calc standard deviation over batch
+        # [1 x C x H]  Calc standard deviation over batch
         y = th.sqrt(y.pow(2.).mean(dim=0, keepdim=False) + alpha)
 
         # [1]  Take average over feature_maps and pixels.
-        y = y.mean().view(1, 1, 1, 1)
+        y = y.mean().view(1, 1, 1)
 
-        # [B x 1 x H x W]  Replicate over group and pixels.
-        y = y.repeat(batch_size, 1, height, width)
+        # [B x 1 x H]  Replicate over group and pixels.
+        y = y.repeat(batch_size, 1, height)
 
         # [B x C x H x W]  Append as new feature_map.
         y = th.cat([x, y], 1)
@@ -352,16 +352,16 @@ class DisFinalBlock(th.nn.Module):
         # declare the required modules for forward pass
         self.batch_discriminator = MinibatchStdDev()
         if use_eql:
-            self.conv_1 = _equalized_conv2d(in_channels + 1, in_channels, (3, 3), pad=1, bias=True)
-            self.conv_2 = _equalized_conv2d(in_channels, in_channels, (4, 4), bias=True)
+            self.conv_1 = _equalized_conv1d(in_channels + 1, in_channels, 3, pad=1, bias=True)
+            self.conv_2 = _equalized_conv1d(in_channels, in_channels, 3, bias=True)
             # final conv layer emulates a fully connected layer
-            self.conv_3 = _equalized_conv2d(in_channels, 1, (1, 1), bias=True)
+            self.conv_3 = _equalized_conv1d(in_channels, 1, 1, bias=True)
         else:
-            from torch.nn import Conv2d
-            self.conv_1 = Conv2d(in_channels + 1, in_channels, (3, 3), padding=1, bias=True)
-            self.conv_2 = Conv2d(in_channels, in_channels, (4, 4), bias=True)
+            from torch.nn import Conv1d
+            self.conv_1 = Conv1d(in_channels + 1, in_channels, 3, padding=1, bias=True)
+            self.conv_2 = Conv1d(in_channels, in_channels, 4, bias=True)
             # final conv layer emulates a fully connected layer
-            self.conv_3 = Conv2d(in_channels, 1, (1, 1), bias=True)
+            self.conv_3 = Conv1d(in_channels, 1, 1, bias=True)
 
         # leaky_relu:
         self.lrelu = LeakyReLU(0.2)
@@ -405,18 +405,18 @@ class ConDisFinalBlock(th.nn.Module):
         # declare the required modules for forward pass
         self.batch_discriminator = MinibatchStdDev()
         if use_eql:
-            self.conv_1 = _equalized_conv2d(in_channels + 1, in_channels, (3, 3), pad=1, bias=True)
-            self.conv_2 = _equalized_conv2d(in_channels, in_channels, (4, 4), bias=True)
+            self.conv_1 = _equalized_conv1d(in_channels + 1, in_channels, 3, pad=1, bias=True)
+            self.conv_2 = _equalized_conv1d(in_channels, in_channels, 4, bias=True)
 
             # final conv layer emulates a fully connected layer
-            self.conv_3 = _equalized_conv2d(in_channels, 1, (1, 1), bias=True)
+            self.conv_3 = _equalized_conv1d(in_channels, 1, 1, bias=True)
         else:
-            from torch.nn import Conv2d
-            self.conv_1 = Conv2d(in_channels + 1, in_channels, (3, 3), padding=1, bias=True)
-            self.conv_2 = Conv2d(in_channels, in_channels, (4, 4), bias=True)
+            from torch.nn import Conv1d
+            self.conv_1 = Conv1d(in_channels + 1, in_channels, 3, padding=1, bias=True)
+            self.conv_2 = Conv1d(in_channels, in_channels, 4, bias=True)
 
             # final conv layer emulates a fully connected layer
-            self.conv_3 = Conv2d(in_channels, 1, (1, 1), bias=True)
+            self.conv_3 = Conv1d(in_channels, 1, 1, bias=True)
 
         # we also need an embedding matrix for the label vectors
         self.label_embedder = Embedding(num_classes, in_channels, max_norm=1)
@@ -433,19 +433,19 @@ class ConDisFinalBlock(th.nn.Module):
         :return: y => output
         """
         # minibatch_std_dev layer
-        y = self.batch_discriminator(x)  # [B x C x 4 x 4]
+        y = self.batch_discriminator(x)  # [B x C x 4]
 
         # perform the forward pass
-        y = self.lrelu(self.conv_1(y))  # [B x C x 4 x 4]
+        y = self.lrelu(self.conv_1(y))  # [B x C x 4]
 
         # obtain the computed features
-        y = self.lrelu(self.conv_2(y))  # [B x C x 1 x 1]
+        y = self.lrelu(self.conv_2(y))  # [B x C x 1]
 
         # embed the labels
         labels = self.label_embedder(labels)  # [B x C]
 
         # compute the inner product with the label embeddings
-        y_ = th.squeeze(th.squeeze(y, dim=-1), dim=-1)  # [B x C]
+        y_ = th.squeeze(y, dim=-1)  # [B x C]
         projection_scores = (y_ * labels).sum(dim=-1)  # [B]
 
         # normal discrimination score
@@ -468,19 +468,19 @@ class DisGeneralConvBlock(th.nn.Module):
         :param out_channels: number of output channels
         :param use_eql: whether to use equalized learning rate
         """
-        from torch.nn import AvgPool2d, LeakyReLU
+        from torch.nn import AvgPool1d, LeakyReLU
 
         super(DisGeneralConvBlock, self).__init__()
 
         if use_eql:
-            self.conv_1 = _equalized_conv2d(in_channels, in_channels, (3, 3), pad=1, bias=True)
-            self.conv_2 = _equalized_conv2d(in_channels, out_channels, (3, 3), pad=1, bias=True)
+            self.conv_1 = _equalized_conv1d(in_channels, in_channels, 3, pad=1, bias=True)
+            self.conv_2 = _equalized_conv1d(in_channels, out_channels, 3, pad=1, bias=True)
         else:
-            from torch.nn import Conv2d
-            self.conv_1 = Conv2d(in_channels, in_channels, (3, 3), padding=1, bias=True)
-            self.conv_2 = Conv2d(in_channels, out_channels, (3, 3), padding=1, bias=True)
+            from torch.nn import Conv1d
+            self.conv_1 = Conv1d(in_channels, in_channels, 3, padding=1, bias=True)
+            self.conv_2 = Conv1d(in_channels, out_channels, 3, padding=1, bias=True)
 
-        self.downSampler = AvgPool2d(2)
+        self.downSampler = AvgPool1d(2)
 
         # leaky_relu:
         self.lrelu = LeakyReLU(0.2)
@@ -497,3 +497,7 @@ class DisGeneralConvBlock(th.nn.Module):
         y = self.downSampler(y)
 
         return y
+
+
+if __name__ == "__main__":
+    pass    
