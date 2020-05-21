@@ -604,6 +604,7 @@ class ProGAN:
                     alpha = ticker / fader_point if ticker <= fader_point else 1
 
                     # extract current batch of data for training
+                    batch,_ = batch
                     images = batch.to(self.device)
 
                     gan_input = th.randn(images.shape[0], self.latent_size).to(self.device)
