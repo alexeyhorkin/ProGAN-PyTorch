@@ -92,9 +92,9 @@ def get_batch(args):
 def visualize_latent_space(batch, args):
     count_of_step , interpol_arr = args.count_iterations-1, []
     folder_path_to_save = args.out_dir
-    postfix_for_file = 'lol'
+    postfix_for_file, title_size = '_ecg', 20
     final_out = batch
-    fig = plt.figure(3)
+    fig = plt.figure(3, figsize=(16,9))
     ax1 = fig.add_subplot(1, 1, 1)
     def animate(i):
         y = final_out[i]
@@ -102,18 +102,18 @@ def visualize_latent_space(batch, args):
         # ax1.plot(start_true)
         # ax1.plot(end_true)
         ax1.plot(y.cpu().numpy()[0], color = 'k')
-        ax1.legend(['latent point'], loc='upper left')
+        ax1.legend(['latent point'], loc='upper left', fontsize=title_size)
         interpol_arr.append(y.cpu().numpy()[0])
-        plt.xlabel('time')
-        plt.ylabel('signal')
-        plt.title("iteration "+ str(i)+ "/"+ str(count_of_step+1))
-    anim = FuncAnimation(fig, animate,frames=count_of_step+1, interval=30)
+        plt.xlabel('time', fontsize=title_size)
+        plt.ylabel('signal', fontsize=title_size)
+        plt.title("iteration "+ str(i)+ "/"+ str(count_of_step+1), fontsize=title_size)
+    anim = FuncAnimation(fig, animate,frames=count_of_step+1)
 
     if not os.path.exists(os.path.dirname(folder_path_to_save)): # create folder if folder doesn't exist
         os.makedirs(folder_path_to_save)
     save_path  = os.path.join(folder_path_to_save, 'animation_interpol' + postfix_for_file + '.gif')
-    # anim.save(save_path, writer='imagemagick', fps=60)
-    plt.show()
+    anim.save(save_path, writer='imagemagick', fps=60)
+    # plt.show()
 
     save_path = os.path.join(folder_path_to_save, 'interpol_array'+ postfix_for_file +'.pickle')
     with open(save_path, 'wb') as q:

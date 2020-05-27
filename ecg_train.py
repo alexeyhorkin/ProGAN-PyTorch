@@ -28,6 +28,7 @@ class Ecg_dataset(Dataset):
         self.len = len(self.data_keys)
         self.otvedenie = 'i'
         self.transform = transform
+        self.statistics = get_statistics(self.data)
 
     def __len__(self):
         return self.len
@@ -35,9 +36,13 @@ class Ecg_dataset(Dataset):
     def __getitem__(self, index):
         key = self.data_keys[index]
         signal = np.array(self.data[key]['Leads'][self.otvedenie]['Signal'])
-        mean = signal.mean()
-        std = np.sqrt(((signal - mean)**2).mean())
-        signal = (signal - mean)/std
+        # mean = signal.mean()
+        # std = np.sqrt(((signal - mean)**2).mean())
+        # signal = (signal - mean)/std
+
+        mu, std = self.statistics
+        signal = (signal - mu)/std
+
         size = len(signal.reshape(-1))
         start = rd.randint(0,size - size_of_data)
         res = signal[start:start+self.size_of_data]
@@ -48,6 +53,19 @@ class Ecg_dataset(Dataset):
         return res
 
 
+def get_statistics(data):
+    mu = 0
+    std = 0
+    otvedenie = 'i'
+    for i in data:
+        mu += np.array(data[i]['Leads'][otvedenie]['Signal']).mean()
+    mu /=len(data)
+    for i in data:
+        std += ((np.array(data[i]['Leads'][otvedenie]['Signal']) - mu)**2).mean()
+    std = np.sqrt((std/len(data)))
+
+    print(f'mu is {mu}, std is {std}')
+    return mu, std
 
 # turn on the fast GPU processing mode on
 cudnn.benchmark = True
@@ -58,16 +76,19 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 if __name__ == '__main__':
 
+    exp_root = 'experiments'
+    assert exp_root in os.listdir(), f'{exp_root} does not exist' 
+
     data_path = os.path.join('data', 'fix_data.json')
 
     # some parameters:
-    size_of_data = 1024
-    depth = 9
+    size_of_data = 2048
+    depth = 10
     # hyper-parameters per depth (resolution)
-    num_epochs = [10, 20, 40, 60, 70, 80, 90, 100, 120]
+    num_epochs = [10, 20, 20, 60, 60, 80, 80, 100, 100, 100]
     fade_ins = [50]*depth
     batch_sizes = [20]*depth
-    latent_size = 128
+    latent_size = 256
     lr = 0.0002
 
     # select the device to be used for training
@@ -90,7 +111,7 @@ if __name__ == '__main__':
     # ======================================================================
     # This line trains the PRO-GAN
     # ======================================================================
-    current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '_exp'
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     pro_gan.train(
         dataset=dataset,
@@ -98,15 +119,17 @@ if __name__ == '__main__':
         fade_in_percentage=fade_ins,
         batch_sizes=batch_sizes,
         feedback_factor=3,
-        log_dir=current_time,
-        save_dir=current_time
+        num_samples=9,
+        log_dir=os.path.join(exp_root, current_time + 'exp_data' ),
+        save_dir=os.path.join(exp_root, current_time + 'exp_data' ),
+        sample_dir=os.path.join(exp_root, current_time + 'exp_data', 'samples')
     )
     # ======================================================================  
 
     # testing and visualizate
     pretrained_gen = pro_gan.gen
 
-    signal = dataset[0][0]
+    signal = dataset[2][0]
     plt.plot(signal)
     plt.show()
 

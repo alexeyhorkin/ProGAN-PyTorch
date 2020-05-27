@@ -316,7 +316,7 @@ class ProGAN:
     """ Wrapper around the Generator and the Discriminator """
 
     def __init__(self, depth=7, latent_size=512, learning_rate=0.001, beta_1=0,
-                 beta_2=0.99, eps=1e-8, drift=0.001, n_critic=1, use_eql=True,
+                 beta_2=0.99, eps=1e-8, drift=0.001, n_critic=1, g_steps=10, use_eql=True,
                  loss="wgan-gp", use_ema=True, ema_decay=0.999,
                  device=th.device("cpu")):
         """
@@ -359,7 +359,7 @@ class ProGAN:
         self.use_ema = use_ema
         self.ema_decay = ema_decay
         self.n_critic = n_critic
-        self.g_steps = 20
+        self.g_steps = g_steps
         self.use_eql = use_eql
         self.device = device
         self.drift = drift
@@ -519,24 +519,26 @@ class ProGAN:
         return loss_val / self.g_steps
 
     @staticmethod
-    def create_grid(samples, scale_factor, img_file):
+    def create_grid(samples, img_file):
         """
         utility function to create a grid of GAN samples
         :param samples: generated samples for storing
-        :param scale_factor: factor for upscaling the image
         :param img_file: name of file to write
         :return: None (saves a file)
         """
-        from torchvision.utils import save_image
-        from torch.nn.functional import interpolate
+        import matplotlib.pyplot as plt
 
-        # upsample the image
-        if scale_factor > 1:
-            samples = interpolate(samples, scale_factor=scale_factor)
+        n = samples.shape[0]
+        assert np.sqrt(n)%1==0, 'the root must be extracted from this number'
 
-        # save the images:
-        save_image(samples, img_file, nrow=int(np.sqrt(len(samples))),
-                   normalize=True, scale_each=True)
+        grid_size = int(np.sqrt(n))
+        fig = plt.figure(figsize=(16,9))
+        for i in range(n):
+            ax = fig.add_subplot(grid_size, grid_size, i+1)
+            ax.plot(samples[i].cpu().numpy()[0])
+        
+        plt.savefig(img_file)
+        plt.close()
 
     def train(self, dataset, epochs, batch_sizes,
               fade_in_percentage, num_samples=16,
@@ -643,21 +645,20 @@ class ProGAN:
                                                     str(i) + ".png")
 
                         # this is done to allow for more GPU space
-                        # with th.no_grad():
-                        #     self.create_grid(
-                        #         samples=self.gen(
-                        #             fixed_input,
-                        #             current_depth,
-                        #             alpha
-                        #         ).detach() if not self.use_ema
-                        #         else self.gen_shadow(
-                        #             fixed_input,
-                        #             current_depth,
-                        #             alpha
-                        #         ).detach(),
-                        #         scale_factor=int(np.power(2, self.depth - current_depth - 1)),
-                        #         img_file=gen_img_file,
-                        #     )
+                        with th.no_grad():
+                            self.create_grid(
+                                samples=self.gen(
+                                    fixed_input,
+                                    current_depth,
+                                    alpha
+                                ).detach() if not self.use_ema
+                                else self.gen_shadow(
+                                    fixed_input,
+                                    current_depth,
+                                    alpha
+                                ).detach(),
+                                img_file=gen_img_file,
+                            )
 
                     # increment the alpha ticker and the step
                     ticker += 1

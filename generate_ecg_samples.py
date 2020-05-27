@@ -38,7 +38,7 @@ cudnn.benchmark = True
 
 
 # set the manual seed
-th.manual_seed(3)
+th.manual_seed(8)
 
 # define the device for the training script
 device = th.device("cuda" if th.cuda.is_available() else "cpu")
@@ -67,7 +67,7 @@ def parse_arguments():
                         help="output depth of images. **Starts from 0")
 
     parser.add_argument("--num_samples", action="store", type=int,
-                        default=10,
+                        default=20,
                         help="number of synchronized grids to be generated")
 
     parser.add_argument("--out_dir", action="store", type=str,
@@ -107,7 +107,7 @@ def main(args):
     # generate the images:
     with th.no_grad():
         point = th.randn(args.num_samples , args.latent_size)
-        point = (point / point.norm()) * (args.latent_size ** 0.5) # ?
+        # point = (point / point.norm()) * (args.latent_size ** 0.5) # ?
         ecg_samples = gen(point, depth=args.out_depth, alpha=1)
 
 
