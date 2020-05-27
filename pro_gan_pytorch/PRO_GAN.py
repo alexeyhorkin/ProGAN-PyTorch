@@ -359,6 +359,7 @@ class ProGAN:
         self.use_ema = use_ema
         self.ema_decay = ema_decay
         self.n_critic = n_critic
+        self.g_steps = 20
         self.use_eql = use_eql
         self.device = device
         self.drift = drift
@@ -494,24 +495,28 @@ class ProGAN:
 
         real_samples = self.__progressive_downsampling(real_batch, depth, alpha)
 
-        # generate fake samples:
-        fake_samples = self.gen(noise, depth, alpha)
+        loss_val = 0
+        for _ in range(self.g_steps):
+            # generate fake samples:
+            fake_samples = self.gen(noise, depth, alpha)
 
-        # TODO_complete:
-        # Change this implementation for making it compatible for relativisticGAN
-        loss = self.loss.gen_loss(real_samples, fake_samples, depth, alpha)
+            # TODO_complete:
+            # Change this implementation for making it compatible for relativisticGAN
+            loss = self.loss.gen_loss(real_samples, fake_samples, depth, alpha)
 
-        # optimize the generator
-        self.gen_optim.zero_grad()
-        loss.backward()
-        self.gen_optim.step()
+            # optimize the generator
+            self.gen_optim.zero_grad()
+            loss.backward()
+            self.gen_optim.step()
+
+            loss_val += loss.item()
 
         # if use_ema is true, apply ema to the generator parameters
-        if self.use_ema:
-            self.ema_updater(self.gen_shadow, self.gen, self.ema_decay)
+            if self.use_ema:
+                self.ema_updater(self.gen_shadow, self.gen, self.ema_decay)
 
         # return the loss value
-        return loss.item()
+        return loss_val / self.g_steps
 
     @staticmethod
     def create_grid(samples, scale_factor, img_file):
