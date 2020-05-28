@@ -96,7 +96,7 @@ def main() -> None:
     num_epochs = [10, 20, 20, 60, 60, 80, 80, 100, 100, 100]
     fade_ins = [50]*depth
     batch_sizes = [20]*depth
-    latent_size = 256
+    latent_size = 128
     lr = 0.0002
 
     # select the device to be used for training
@@ -109,7 +109,7 @@ def main() -> None:
     # ======================================================================
     # This line creates the PRO-GAN
     # ======================================================================
-    pro_gan = ProGAN(depth=depth, 
+    pro_gan = ProGAN(depth=depth, g_steps=20, 
                     latent_size=latent_size, loss='standard-gan', learning_rate=lr, device=device)
     # ======================================================================
     # This line trains the PRO-GAN

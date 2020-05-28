@@ -232,7 +232,7 @@ class GenGeneralConvBlock(th.nn.Module):
 
         super(GenGeneralConvBlock, self).__init__()
 
-        self.upsample = lambda x: interpolate(x, scale_factor=2)
+        self.upsample = lambda x: interpolate(x, scale_factor=2, mode='linear', align_corners=True)
 
         if use_eql:
             self.conv_1 = _equalized_conv1d(in_channels, out_channels, 3,
