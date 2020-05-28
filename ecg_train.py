@@ -137,17 +137,17 @@ def main() -> None:
         sys.stdout = writer
     # ======================================================================
 
-    # pro_gan.train(
-    #     dataset=dataset,
-    #     epochs=num_epochs,
-    #     fade_in_percentage=fade_ins,
-    #     batch_sizes=batch_sizes,
-    #     feedback_factor=3,
-    #     num_samples=9,
-    #     log_dir=os.path.join(exp_root, current_time + '_exp_data' ),
-    #     save_dir=os.path.join(exp_root, current_time + '_exp_data' ),
-    #     sample_dir=os.path.join(exp_root, current_time + '_exp_data', 'samples')
-    # )
+    pro_gan.train(
+        dataset=dataset,
+        epochs=num_epochs,
+        fade_in_percentage=fade_ins,
+        batch_sizes=batch_sizes,
+        feedback_factor=3,
+        num_samples=9,
+        log_dir=os.path.join(exp_root, current_time + '_exp_data' ),
+        save_dir=os.path.join(exp_root, current_time + '_exp_data' ),
+        sample_dir=os.path.join(exp_root, current_time + '_exp_data', 'samples')
+    )
     # ======================================================================  
 
     # testing and visualizate
